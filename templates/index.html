@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Renamer - Spreadsheet Powered</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="grain-overlay"></div>
+    
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">📁</div>
+                <h1>File Renamer</h1>
+            </div>
+            <p class="tagline">Batch rename files using Excel spreadsheets</p>
+        </header>
+
+        <!-- Step 1: Excel Upload -->
+        <section class="step" id="step1">
+            <div class="step-header">
+                <div class="step-number">01</div>
+                <h2>Upload Excel Mapping</h2>
+            </div>
+            <div class="step-content">
+                <div class="upload-zone" id="excelDropZone">
+                    <div class="upload-icon">📊</div>
+                    <p class="upload-text">Drop Excel file here or click to browse</p>
+                    <p class="upload-hint">Column A: Current names • Column B: New names • Column C: A or T (optional)</p>
+                    <input type="file" id="excelInput" accept=".xlsx,.xls" hidden>
+                </div>
+                <div class="file-status" id="excelStatus" style="display: none;">
+                    <div class="status-icon">✓</div>
+                    <div class="status-info">
+                        <div class="status-name" id="excelFileName"></div>
+                        <div class="status-detail" id="excelFileDetail"></div>
+                    </div>
+                    <button class="status-remove" onclick="removeExcel()">×</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 2: Files Upload -->
+        <section class="step" id="step2">
+            <div class="step-header">
+                <div class="step-number">02</div>
+                <h2>Upload Files to Rename</h2>
+            </div>
+            <div class="step-content">
+                <div class="upload-zone" id="filesDropZone">
+                    <div class="upload-icon">📄</div>
+                    <p class="upload-text">Drop files here or click to browse</p>
+                    <p class="upload-hint">Select multiple files to rename</p>
+                    <input type="file" id="filesInput" multiple hidden>
+                </div>
+                <div class="file-status" id="filesStatus" style="display: none;">
+                    <div class="status-icon">✓</div>
+                    <div class="status-info">
+                        <div class="status-name" id="filesCount"></div>
+                        <div class="status-detail" id="filesDetail"></div>
+                    </div>
+                    <button class="status-remove" onclick="removeFiles()">×</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 3: Preview & Execute -->
+        <section class="step" id="step3">
+            <div class="step-header">
+                <div class="step-number">03</div>
+                <h2>Preview & Execute</h2>
+            </div>
+            <div class="step-content">
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="previewBtn" onclick="previewRenames()" disabled>
+                        <span class="btn-icon">👁️</span>
+                        Preview Renames
+                    </button>
+                    <button class="btn btn-success" id="executeBtn" onclick="executeRenames()" disabled>
+                        <span class="btn-icon">⚡</span>
+                        Execute Renames
+                    </button>
+                </div>
+
+                <div class="preview-container" id="previewContainer" style="display: none;">
+                    <div class="preview-summary" id="previewSummary"></div>
+                    
+                    <!-- Acknowledge Errors Section -->
+                    <div class="acknowledge-errors" id="acknowledgeErrorsSection" style="display: none;">
+                        <label class="acknowledge-label">
+                            <input type="checkbox" id="acknowledgeErrorsCheckbox" onchange="updateExecuteButton()">
+                            <span id="acknowledgeErrorsText"></span>
+                        </label>
+                        <p class="acknowledge-hint">Files with errors will be skipped. Only files marked as "READY" will be renamed.</p>
+                    </div>
+                    
+                    <div class="preview-table-container">
+                        <table class="preview-table" id="previewTable">
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Current Name</th>
+                                    <th>New Name</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="previewTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="results-container" id="resultsContainer" style="display: none;">
+                    <div class="results-summary" id="resultsSummary"></div>
+                    <div class="results-actions">
+                        <button class="btn btn-secondary" onclick="downloadFiles()">
+                            <span class="btn-icon">📥</span>
+                            Download Renamed Files
+                        </button>
+                        <button class="btn btn-secondary" onclick="downloadReport()">
+                            <span class="btn-icon">📄</span>
+                            Download Report
+                        </button>
+                        <button class="btn btn-outline" onclick="resetApp()">
+                            <span class="btn-icon">🔄</span>
+                            Start Over
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Toast Notification -->
+        <div class="toast" id="toast">
+            <div class="toast-icon" id="toastIcon"></div>
+            <div class="toast-message" id="toastMessage"></div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="loading-spinner"></div>
+            <div class="loading-text" id="loadingText">Processing...</div>
+        </div>
+
+        <!-- Chat Assistant Button -->
+        <button class="chat-button" id="chatButton" onclick="toggleChat()" title="Chat with AI Assistant">
+            💬
+        </button>
+
+        <!-- Chat Panel -->
+        <div class="chat-panel" id="chatPanel" style="display: none;">
+            <div class="chat-header">
+                <div class="chat-header-info">
+                    <div class="chat-avatar">🤖</div>
+                    <div>
+                        <div class="chat-title">AI Assistant</div>
+                        <div class="chat-subtitle">Here to help with errors</div>
+                    </div>
+                </div>
+                <button class="chat-close" onclick="toggleChat()">✕</button>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="chat-welcome">
+                    <div class="chat-welcome-icon">👋</div>
+                    <p>Hi! I'm your AI assistant.</p>
+                    <p class="chat-welcome-hint">Ask me about errors or how to fix them!</p>
+                </div>
+            </div>
+            
+            <div class="chat-input-container">
+                <input 
+                    type="text" 
+                    id="chatInput" 
+                    class="chat-input" 
+                    placeholder="Ask me anything..."
+                    onkeypress="handleChatKeyPress(event)"
+                />
+                <button class="chat-send-btn" onclick="sendChatMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>Built for efficient batch file management • Upload, preview, rename</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
